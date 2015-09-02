@@ -150,7 +150,8 @@ public class MesosNimbus implements INimbus {
 
   protected void setupHttpServer() throws Exception {
       _httpServer = new LocalFileServer();
-      _configUrl = _httpServer.serveDir("/conf", "conf", _localFileServerPort);
+      String filePath = "/usr/local/etc/storm/conf";
+      _configUrl = _httpServer.serveDir("/conf", filePath, _localFileServerPort);
       
       LOG.info("Started HTTP server from which config for the MesosSupervisor's may be fetched. URL: " + _configUrl);
   }
@@ -546,7 +547,10 @@ public class MesosNimbus implements INimbus {
               }
 
               String executorDataStr = JSONValue.toJSONString(executorData);
-              LOG.info("Launching task with Mesos Executor data: <" + executorDataStr + ">");
+              String executorURI = (String) _conf.get(CONF_EXECUTOR_URI);
+//              String fileName =  executorURI.substring(executorURI.lastIndexOf('/') + 1, executorURI.length());
+//              LOG.info("Mesos executor file name " + fileName);
+                LOG.info("Launching task with Mesos Executor data: <" + executorDataStr + ">");
               TaskInfo task = TaskInfo.newBuilder()
                   .setName("worker " + slot.getNodeId() + ":" + slot.getPort())
                   .setTaskId(taskId)
@@ -555,9 +559,9 @@ public class MesosNimbus implements INimbus {
                           .setExecutorId(ExecutorID.newBuilder().setValue(details.getId()))
                           .setData(ByteString.copyFromUtf8(executorDataStr))
                           .setCommand(CommandInfo.newBuilder()
-                              .addUris(URI.newBuilder().setValue((String) _conf.get(CONF_EXECUTOR_URI)))
+//                              .addUris(URI.newBuilder().setValue((String) _conf.get(CONF_EXECUTOR_URI)))
                               .addUris(URI.newBuilder().setValue(configUri))
-                              .setValue("cp storm.yaml storm-mesos*/conf && cd storm-mesos* && python bin/storm " +
+                              .setValue("wget -O storm-mesos.tgz " + executorURI + " && tar xvf storm-mesos.tgz && cd storm-mesos* && cp ../storm.yaml conf/storm.yaml && python bin/storm " +
                                   "supervisor storm.mesos.MesosSupervisor"))
                           .addResources(Resource.newBuilder()
                               .setName("cpus")
